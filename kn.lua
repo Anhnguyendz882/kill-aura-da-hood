@@ -1,43 +1,36 @@
 --[[ 
-    DA HOOD GALAXY V37 - ELITE PREMIUM
-    - UI: Kavo UI (Classic Menu)
-    - Anti-Ban: Metatable Hooking + Event Spoofing
-    - Speed Fix: Vector Velocity (Bypass Da Hood Anti-Speed)
-    - Combat: Silent Aimlock + Wallbang Kill Aura (No Delay)
+    DA HOOD GALAXY V40 - TARGET TROLL EDITION
+    Developer: KN (Anhnguyendz882)
+    Features: Kill Aura, Aimlock, Speed Bypass, Noclip, Target Teleport Troll.
 ]]
 
--- 1. KÍCH HOẠT HỆ THỐNG PHÒNG THỦ (ANTI-BAN)
+-- 1. SIÊU BYPASS (ANTI-BAN & SPOOFING)
 local gmt = getrawmetatable(game)
 setreadonly(gmt, false)
 local oldNamecall = gmt.__namecall
-local oldIndex = gmt.__index
-
 gmt.__namecall = newcclosure(function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
     if method == "FireServer" and self.Name == "MainEvent" then
-        -- Chặn đứng mọi báo cáo "lạ" gửi về Server
-        if args[1] == "CheckForCheat" or args[1] == "BanMe" or args[1] == "TeleportDetect" or args[1] == "WS" then
+        if args[1] == "CheckForCheat" or args[1] == "BanMe" or args[1] == "WS" or args[1] == "TeleportDetect" then 
             return nil 
         end
     end
     return oldNamecall(self, ...)
 end)
-
-gmt.__index = newcclosure(function(self, b)
-    if not checkcaller() and self:IsA("Humanoid") then
-        if b == "WalkSpeed" then return 16 end
-        if b == "JumpPower" then return 50 end
-    end
-    return oldIndex(self, b)
-end)
 setreadonly(gmt, true)
 
--- 2. KHỞI TẠO UI (KAVO)
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library:CreateWindow("GALAXY V37 - ELITE", "Grape")
+-- 2. KHỞI TẠO RAYFIELD UI
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- BIẾN LOGIC CHUYÊN NGHIỆP
+local Window = Rayfield:CreateWindow({
+   Name = "DA HOOD GALAXY V40 - KN",
+   LoadingTitle = "Elite Trolling System",
+   LoadingSubtitle = "by KN (Anhnguyendz882)",
+   ConfigurationSaving = { Enabled = false }
+})
+
+-- BIẾN HỆ THỐNG
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -45,16 +38,17 @@ local MainEvent = game:GetService("ReplicatedStorage"):WaitForChild("MainEvent")
 
 local Settings = {
     KillAura = false,
+    Aimlock = false,
     AuraRange = 100,
     Speed = 16,
     Jump = 50,
-    Aimlock = false,
     Noclip = false,
     AutoEscape = true,
-    SafeZone = CFrame.new(-396, 21, -298) -- Tọa độ khu vực an toàn trên mặt đất
+    TargetName = "", -- Tên người bị troll
+    SafeZone = CFrame.new(-396, 21, -298)
 }
 
--- HÀM LẤY MỤC TIÊU GẦN NHẤT (SMART TARGET)
+-- HÀM LẤY MỤC TIÊU GẦN NHẤT
 local function GetClosest()
     local target, dist = nil, math.huge
     for _, p in pairs(Players:GetPlayers()) do
@@ -66,94 +60,137 @@ local function GetClosest()
     return target
 end
 
--- TAB CHIẾN ĐẤU (PREMIUM COMBAT)
-local Combat = Window:NewTab("Chiến Đấu")
-local CombatSec = Combat:NewSection("VIP Combat System")
+-- TẠO CÁC TAB
+local CombatTab = Window:CreateTab("Combat", 4483362458)
+local TrollTab = Window:CreateTab("Trolling", 4483362458)
+local MoveTab = Window:CreateTab("Movement", 4483362458)
+local VisualTab = Window:CreateTab("System", 4483362458)
 
-CombatSec:NewToggle("Kill Aura (Wallbang)", "Bắn xuyên tường cực mạnh", function(v) Settings.KillAura = v end)
-CombatSec:NewToggle("Aimlock (Lock Tâm)", "Tự động hướng Camera vào đầu địch", function(v) Settings.Aimlock = v end)
-CombatSec:NewSlider("Tầm Aura", "Range", 300, 50, function(v) Settings.AuraRange = v end)
+-- [TAB COMBAT]
+CombatTab:CreateToggle({
+   Name = "Kill Aura (Wallbang Headshot)",
+   CurrentValue = false,
+   Callback = function(v) Settings.KillAura = v end,
+})
 
-CombatSec:NewButton("TROLL: Void Teleport", "Dìm địch xuống đáy Map", function()
-    local t = GetClosest()
-    if t then
-        local old = LocalPlayer.Character.HumanoidRootPart.CFrame
-        for i = 1, 20 do
-            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, -1200, 0)
-            t.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+CombatTab:CreateToggle({
+   Name = "Aimlock (Lock Tâm Đầu)",
+   CurrentValue = false,
+   Callback = function(v) Settings.Aimlock = v end,
+})
+
+-- [TAB TROLLING - CHỨC NĂNG MỚI]
+TrollTab:CreateInput({
+   Name = "Nhập Tên Người Muốn Troll",
+   PlaceholderText = "Tên hoặc DisplayName...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      Settings.TargetName = Text
+   end,
+})
+
+TrollTab:CreateButton({
+   Name = "EXECUTE: Teleport Void Troll",
+   Callback = function()
+      local TargetPlayer = nil
+      for _, p in pairs(Players:GetPlayers()) do
+         if p.Name:lower():sub(1, #Settings.TargetName) == Settings.TargetName:lower() or p.DisplayName:lower():sub(1, #Settings.TargetName) == Settings.TargetName:lower() then
+            TargetPlayer = p
+            break
+         end
+      end
+
+      if TargetPlayer and TargetPlayer.Character and TargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+         local OldPos = LocalPlayer.Character.HumanoidRootPart.CFrame
+         Rayfield:Notify({Title = "Trolling", Content = "Đang bắt giữ "..TargetPlayer.DisplayName, Duration = 3})
+         
+         -- 1. Teleport đến mục tiêu
+         LocalPlayer.Character.HumanoidRootPart.CFrame = TargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -1)
+         task.wait(0.1)
+         
+         -- 2. Dìm xuống vực (Void)
+         for i = 1, 30 do
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, -1500, 0)
+            TargetPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
             task.wait(0.01)
-        end
-        LocalPlayer.Character.HumanoidRootPart.CFrame = old
-    end
-end)
+         end
+         
+         -- 3. Quay về vị trí cũ
+         LocalPlayer.Character.HumanoidRootPart.CFrame = OldPos
+         Rayfield:Notify({Title = "Hoàn tất", Content = "Đã tiễn mục tiêu lên đường!", Duration = 2})
+      else
+         Rayfield:Notify({Title = "Lỗi", Content = "Không tìm thấy người chơi này!", Duration = 3})
+      end
+   end,
+})
 
--- TAB DI CHUYỂN (BYPASS MOVEMENT)
-local Move = Window:NewTab("Di Chuyển")
-local MoveSec = Move:NewSection("Elite Movement")
+-- [TAB MOVEMENT]
+MoveTab:CreateSlider({
+   Name = "Speed Bypass (Velocity)",
+   Range = {16, 300},
+   Increment = 1,
+   CurrentValue = 16,
+   Callback = function(v) Settings.Speed = v end,
+})
 
-MoveSec:NewSlider("Speed Boost", "Vượt mặt Anti-Cheat", 250, 16, function(v) Settings.Speed = v end)
-MoveSec:NewSlider("Jump Height", "Nhảy cao", 300, 50, function(v) Settings.Jump = v end)
-MoveSec:NewToggle("Noclip (Xuyên tường)", "Đi xuyên mọi vật cản", function(v) Settings.Noclip = v end)
+MoveTab:CreateToggle({
+   Name = "Noclip (Xuyên Tường)",
+   CurrentValue = false,
+   Callback = function(v) Settings.Noclip = v end,
+})
 
--- TAB HỆ THỐNG
-local Sys = Window:NewTab("Hệ Thống")
-local SysSec = Sys:NewSection("Protection & Visuals")
+-- [TAB SYSTEM]
+VisualTab:CreateToggle({
+   Name = "Auto Escape (Máu yếu)",
+   CurrentValue = true,
+   Callback = function(v) Settings.AutoEscape = v end,
+})
 
-SysSec:NewToggle("Auto Escape (Máu yếu)", "Tự về Safe Zone khi máu < 25", function(v) Settings.AutoEscape = v end)
-SysSec:NewButton("FPS Boost (Giảm Lag)", function()
-    for _, v in pairs(game:GetDescendants()) do
-        if v:IsA("Part") then v.Material = "SmoothPlastic" v.CastShadow = false end
-    end
-end)
-SysSec:NewButton("Hiện ESP Highlight", function()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("Highlight") then
-            Instance.new("Highlight", p.Character)
-        end
-    end
-end)
+VisualTab:CreateButton({
+   Name = "ESP & FPS Boost",
+   Callback = function()
+      for _, p in pairs(Players:GetPlayers()) do
+          if p ~= LocalPlayer and p.Character then
+              if not p.Character:FindFirstChild("Highlight") then
+                  Instance.new("Highlight", p.Character)
+              end
+          end
+      end
+   end,
+})
 
--- 3. CORE LOGIC (VÒNG LẶP XỬ LÝ CHUYÊN NGHIỆP)
+-- 3. VÒNG LẶP XỬ LÝ TRUNG TÂM
 RunService.Stepped:Connect(function()
     local Char = LocalPlayer.Character
     if not Char or not Char:FindFirstChild("Humanoid") then return end
 
-    -- FIX SPEED: Sử dụng Velocity để không bị giật lùi (Bypass chuẩn)
+    -- FIX SPEED BYPASS
     if Settings.Speed > 16 then
         Char.HumanoidRootPart.Velocity = Char.Humanoid.MoveDirection * Settings.Speed + Vector3.new(0, Char.HumanoidRootPart.Velocity.Y, 0)
     end
-    Char.Humanoid.JumpPower = Settings.Jump
 
     -- NOCLIP
     if Settings.Noclip then
         for _, v in pairs(Char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
     end
 
-    -- AUTO ESCAPE: Dịch chuyển về Safe Zone (Shop súng/Bank)
+    -- AUTO ESCAPE
     if Settings.AutoEscape and Char.Humanoid.Health > 0 and Char.Humanoid.Health < 25 then
         Char.HumanoidRootPart.CFrame = Settings.SafeZone
-        task.wait(1.5)
+        task.wait(1)
     end
 
-    -- KILL AURA ELITE: Fix Dame + Wallbang
-    if Settings.KillAura and Char:FindFirstChildOfClass("Tool") then
-        local t = GetClosest()
-        if t and (Char.HumanoidRootPart.Position - t.Character.HumanoidRootPart.Position).Magnitude <= Settings.AuraRange then
-            MainEvent:FireServer("UpdateMousePos", t.Character.Head.Position)
-            MainEvent:FireServer("Shoot", t.Character.Head.Position)
+    -- KILL AURA & AIMLOCK
+    local target = GetClosest()
+    if target and (Char.HumanoidRootPart.Position - target.Character.HumanoidRootPart.Position).Magnitude <= Settings.AuraRange then
+        if Settings.KillAura and Char:FindFirstChildOfClass("Tool") then
+            MainEvent:FireServer("UpdateMousePos", target.Character.Head.Position)
+            MainEvent:FireServer("Shoot", target.Character.Head.Position)
+        end
+        if Settings.Aimlock then
+            workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, target.Character.Head.Position)
         end
     end
 end)
 
--- AIMLOCK: KHÓA CAMERA
-RunService.RenderStepped:Connect(function()
-    if Settings.Aimlock then
-        local t = GetClosest()
-        if t and t.Character:FindFirstChild("Head") then
-            local Cam = workspace.CurrentCamera
-            Cam.CFrame = CFrame.new(Cam.CFrame.Position, t.Character.Head.Position)
-        end
-    end
-end)
-
-print("GALAXY SUPREME V37 - PREMIUM STEALTH READY")
+Rayfield:Notify({Title = "GALAXY SUPREME V40", Content = "Dán chuẩn, quậy gắt đi KN!", Duration = 5})
