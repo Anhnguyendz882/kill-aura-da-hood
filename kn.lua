@@ -1,29 +1,28 @@
 --[[ 
-    DA HOOD GALAXY V32.1 - ULTRA STEALTH EDITION
-    Fix: Heavy Anti-Ban, Anti-Log, Deep Metatable Spoofing.
-    Features: Kill Aura Wallbang, Troll Void, Noclip, ESP, Auto Escape.
+    DA HOOD GALAXY V33 - ULTIMATE FINAL EDITION
+    Developer: KN (Anhnguyendz882)
+    Fix: Menu 100% hiện, Anti-Ban Mạnh, Wallbang, Troll, Noclip, Auto Escape.
 ]]
 
--- 1. HỆ THỐNG CHỐNG BAN CHUYÊN SÂU (PHẢI CHẠY TRƯỚC UI)
-local function Bypass()
+-- 1. SIÊU BYPASS ANTI-BAN (CHẠY TRƯỚC TIÊN)
+local function UltraBypass()
     local gmt = getrawmetatable(game)
     setreadonly(gmt, false)
-    local oldIndex = gmt.__index
     local oldNamecall = gmt.__namecall
+    local oldIndex = gmt.__index
 
-    -- Chặn Game gửi Log về Server khi phát hiện Speed/Jump/Teleport
     gmt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
         local args = {...}
+        -- Chặn đứng các sự kiện check hack của Da Hood (Adonis & MainEvent)
         if method == "FireServer" and self.Name == "MainEvent" then
-            if args[1] == "CheckForCheat" or args[1] == "BanMe" or args[1] == "TeleportDetect" then
-                return nil -- Chặn gói tin báo cáo hack
+            if args[1] == "CheckForCheat" or args[1] == "BanMe" or args[1] == "TeleportDetect" or args[1] == "WS" then
+                return nil 
             end
         end
         return oldNamecall(self, ...)
     end)
 
-    -- Fake chỉ số để Anticheat không quét được WalkSpeed/JumpPower
     gmt.__index = newcclosure(function(self, b)
         if not checkcaller() and self:IsA("Humanoid") then
             if b == "WalkSpeed" then return 16 end
@@ -32,24 +31,14 @@ local function Bypass()
         return oldIndex(self, b)
     end)
     setreadonly(gmt, true)
-    
-    -- Chặn các script của game quét bộ nhớ (Adonis Bypass)
-    if setfflag then
-        setfflag("AbuseReportScreenshot", "False")
-        setfflag("CrashPadUploadToS3Only", "False")
-    end
 end
-Bypass()
+UltraBypass()
 
--- 2. KHỞI TẠO UI RAYFIELD
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Window = Rayfield:CreateWindow({
-   Name = "DA HOOD V32.1 - KN STEALTH",
-   LoadingTitle = "Anti-Ban System: 100% Stealth",
-   LoadingSubtitle = "by KN (Anhnguyendz882)",
-   ConfigurationSaving = { Enabled = false }
-})
+-- 2. KHỞI TẠO UI KAVO (KHÔNG LỖI MENU)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library:CreateWindow("GALAXY V33 - KN PRO", "Grape")
 
+-- BIẾN HỆ THỐNG
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -57,83 +46,103 @@ local MainEvent = game:GetService("ReplicatedStorage"):WaitForChild("MainEvent")
 
 local Settings = {
     KillAura = false,
-    AuraRange = 90, -- Giảm nhẹ Range để tránh bị quét lộ liễu
-    Whitelist = {"KN_Admin"},
+    AuraRange = 90,
+    Whitelist = {"KN_Admin", "Anhnguyendz882"},
     WalkSpeed = 16,
     JumpPower = 50,
     ESP = false,
     Noclip = false,
     AutoEscape = true,
-    EscapeHealth = 25
+    MinHealth = 30
 }
 
--- 3. TẠO CÁC TAB
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-local MoveTab = Window:CreateTab("Movement", 4483362458)
-local VisualTab = Window:CreateTab("Visuals", 4483362458)
+-- 3. TẠO CÁC TAB CHỨC NĂNG
+local Tab1 = Window:NewTab("Chiến Đấu")
+local Sec1 = Tab1:NewSection("Kill Aura VIP & Troll")
 
-CombatTab:CreateToggle({
-   Name = "Kill Aura (Wallbang)",
-   CurrentValue = false,
-   Callback = function(v) Settings.KillAura = v end,
-})
+Sec1:NewToggle("Bật Kill Aura (Wallbang)", "Bắn xuyên mọi vật cản", function(state)
+    Settings.KillAura = state
+end)
 
-CombatTab:CreateButton({
-   Name = "Troll: Void Teleport",
-   Callback = function()
-        local Target = nil
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local d = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                if d < 25 then Target = p break end
+Sec1:NewSlider("Tầm xa Aura", "Range", 250, 50, function(v)
+    Settings.AuraRange = v
+end)
+
+Sec1:NewButton("TROLL: Teleport Void", "Dìm mục tiêu xuống vực", function()
+    local Target = nil
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            if (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude < 30 then
+                Target = p break
             end
         end
-        if Target then
-            local OldPos = LocalPlayer.Character.HumanoidRootPart.CFrame
-            for i = 1, 15 do
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, -1000, 0)
-                Target.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-                task.wait(0.01)
-            end
-            LocalPlayer.Character.HumanoidRootPart.CFrame = OldPos
+    end
+    if Target then
+        local OldPos = LocalPlayer.Character.HumanoidRootPart.CFrame
+        for i = 1, 20 do
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, -1500, 0)
+            Target.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+            task.wait(0.01)
         end
-   end,
-})
+        LocalPlayer.Character.HumanoidRootPart.CFrame = OldPos
+    end
+end)
 
-MoveTab:CreateToggle({ Name = "Noclip", CurrentValue = false, Callback = function(v) Settings.Noclip = v end })
-MoveTab:CreateSlider("Speed", 16, 150, 16, function(v) Settings.WalkSpeed = v end)
-MoveTab:CreateSlider("Jump", 50, 200, 50, function(v) Settings.JumpPower = v end)
+local Tab2 = Window:NewTab("Di Chuyển")
+local Sec2 = Tab2:NewSection("Speed, Jump & Noclip")
 
-VisualTab:CreateToggle("ESP", false, function(v) Settings.ESP = v end)
-VisualTab:CreateButton("FPS Boost", function()
+Sec2:NewToggle("Noclip (Đi xuyên tường)", "Đi xuyên mọi thứ", function(state)
+    Settings.Noclip = state
+end)
+
+Sec2:NewSlider("Tốc độ", "Speed", 250, 16, function(v)
+    Settings.WalkSpeed = v
+end)
+
+Sec2:NewSlider("Nhảy cao", "Jump", 300, 50, function(v)
+    Settings.JumpPower = v
+end)
+
+local Tab3 = Window:NewTab("Hệ Thống")
+local Sec3 = Tab3:NewSection("Bảo Vệ & Visuals")
+
+Sec3:NewToggle("Hiện ESP Kẻ Thù", "Soi xuyên tường", function(state)
+    Settings.ESP = state
+end)
+
+Sec3:NewToggle("Auto Escape (Máu yếu)", "Tự động trốn", function(state)
+    Settings.AutoEscape = state
+end)
+
+Sec3:NewButton("FPS Boost (Giảm Lag)", function()
     for _, v in pairs(game:GetDescendants()) do
         if v:IsA("Part") then v.Material = "SmoothPlastic" v.CastShadow = false end
     end
 end)
 
--- 4. VÒNG LẶP XỬ LÝ (TỐI ƯU HÓA TRÁNH LAG)
+-- 4. VÒNG LẶP XỬ LÝ CHÍNH (CORE LOGIC)
 RunService.Stepped:Connect(function()
     local Char = LocalPlayer.Character
     if not Char or not Char:FindFirstChild("Humanoid") then return end
     
-    -- Noclip
+    -- Noclip Logic
     if Settings.Noclip then
         for _, v in pairs(Char:GetDescendants()) do
             if v:IsA("BasePart") then v.CanCollide = false end
         end
     end
 
-    -- Movement
+    -- Movement Logic
     Char.Humanoid.WalkSpeed = Settings.WalkSpeed
     Char.Humanoid.JumpPower = Settings.JumpPower
 
-    -- Auto Escape (Teleport trốn khi máu yếu)
-    if Settings.AutoEscape and Char.Humanoid.Health > 0 and Char.Humanoid.Health < Settings.EscapeHealth then
-        Char.HumanoidRootPart.CFrame = Char.HumanoidRootPart.CFrame * CFrame.new(0, 500, 0)
-        task.wait(1.5)
+    -- Auto Escape (Teleport trốn khi bị bắn đau)
+    if Settings.AutoEscape and Char.Humanoid.Health > 0 and Char.Humanoid.Health < Settings.MinHealth then
+        Char.HumanoidRootPart.CFrame = Char.HumanoidRootPart.CFrame * CFrame.new(0, 1000, 0)
+        task.wait(2)
     end
 
-    -- KILL AURA VIP (FIXED)
+    -- Kill Aura VIP (Wallbang + Fixed Damage)
     if Settings.KillAura and Char:FindFirstChildOfClass("Tool") then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
@@ -143,7 +152,7 @@ RunService.Stepped:Connect(function()
                 if not safe and p.Character.Humanoid.Health > 0 then
                     local root = p.Character.HumanoidRootPart
                     if (Char.HumanoidRootPart.Position - root.Position).Magnitude <= Settings.AuraRange then
-                        -- Gửi packet ảo để đánh lừa server
+                        -- Gửi packet chuẩn gây dame xuyên tường
                         MainEvent:FireServer("UpdateMousePos", root.Position)
                         MainEvent:FireServer("Shoot", root.Position)
                     end
@@ -153,16 +162,20 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ESP
+-- ESP Logic
 RunService.RenderStepped:Connect(function()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
             local hl = p.Character:FindFirstChild("KN_ESP")
             if Settings.ESP then
-                if not hl then hl = Instance.new("Highlight", p.Character) hl.Name = "KN_ESP" end
+                if not hl then 
+                    hl = Instance.new("Highlight", p.Character) 
+                    hl.Name = "KN_ESP"
+                    hl.FillColor = Color3.fromRGB(255, 0, 0)
+                end
             elseif hl then hl:Destroy() end
         end
     end
 end)
 
-Rayfield:Notify({Title = "STEALTH LOADED", Content = "Anti-Ban Mạnh Đã Kích Hoạt!", Duration = 5})
+print("GALAXY SUPREME V33 LOADED - STEALTH PROTECTED")
